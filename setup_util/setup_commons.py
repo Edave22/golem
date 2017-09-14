@@ -62,7 +62,7 @@ class PyInstaller(Command):
 
         for spec in ['golemapp.spec', 'golemcli.spec']:
             self.banner("Building {}".format(spec))
-            subprocess.check_call(['python', '-m', 'PyInstaller', '--clean', '--win-private-assemblies', spec])
+            subprocess.check_call(['python3', '-m', 'PyInstaller', '--clean', '--win-private-assemblies', spec])
 
         print("> Copying taskcollector")
         self.copy_taskcollector(dist_dir)
