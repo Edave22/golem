@@ -57,7 +57,13 @@ class TestTaskManager(LogTestCase, TestDirFixtureWithReactor):
         self.test_nonce = "%.3f-%d" % (time.time(), random.random() * 10000)
         keys_auth = Mock()
         keys_auth.sign.return_value = 'sig_%s' % (self.test_nonce,)
-        self.tm = TaskManager("ABC", Node(), keys_auth, root_path=self.path)
+        self.tm = TaskManager(
+            "ABC",
+            Node(),
+            keys_auth,
+            root_path=self.path,
+            task_persistence=False
+        )
         self.tm.key_id = "KEYID"
         self.tm.listen_address = "10.10.10.10"
         self.tm.listen_port = 2222
@@ -95,6 +101,8 @@ class TestTaskManager(LogTestCase, TestDirFixtureWithReactor):
         task_mock.query_extra_data_return_value = Task.ExtraData(should_wait=False, ctd=ctd)
         Task.get_progress = Mock()
         task_mock.get_progress.return_value = 0.3
+
+        task_mock.__reduce__ = lambda self: (mock.Mock, ())
 
         return task_mock
 

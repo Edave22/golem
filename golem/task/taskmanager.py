@@ -69,7 +69,7 @@ class TaskManager(TaskEventListener):
             root_path: str = "res",
             use_distributed_resources: bool = True,
             tasks_dir: str = "tasks",
-            task_persistence: bool = False) -> None:
+            task_persistence: bool = True) -> None:
         super().__init__()
 
         self.apps_manager = AppsManager()
@@ -96,21 +96,28 @@ class TaskManager(TaskEventListener):
         # Remember to also remove it from init params
         self.task_persistence = task_persistence
 
-        self.tasks_dir = Path(tasks_dir)
+        dump_path = Path(tasks_dir)
+        self.tasks_dir = dump_path / "taskmanager"
         if not self.tasks_dir.is_dir():
             self.tasks_dir.mkdir(parents=True)
         self.root_path = root_path
         self.dir_manager = DirManager(self.get_task_manager_root())
 
-        resource_manager = HyperdriveResourceManager(self.dir_manager,
-                                                     resource_dir_method=self.dir_manager.get_task_temporary_dir)
+        resource_manager = HyperdriveResourceManager(
+            self.dir_manager,
+            resource_dir_method=self.dir_manager.get_task_temporary_dir
+        )
         self.task_result_manager = EncryptedResultPackageManager(resource_manager)
 
         self.activeStatus = [TaskStatus.computing, TaskStatus.starting,
                              TaskStatus.waiting, TaskStatus.restarted]
         self.use_distributed_resources = use_distributed_resources
 
-        self.comp_task_keeper = CompTaskKeeper(self.tasks_dir, persist=self.task_persistence)
+        self.comp_task_keeper = CompTaskKeeper(
+            dump_path / "taskkeeper",
+            persist=self.task_persistence
+        )
+
         if self.task_persistence:
             self.restore_tasks()
 
@@ -191,6 +198,10 @@ class TaskManager(TaskEventListener):
         logger.debug('DUMP TASK')
         try:
             data = self.tasks[task_id], self.tasks_states[task_id]
+            print(type(self.tasks[task_id]))
+            assert isinstance(self.tasks[task_id], Task)
+            print(type(self.tasks_states[task_id]))
+            assert isinstance(self.tasks_states[task_id], TaskState)
             filepath = self.tasks_dir / ('%s.pickle' % (task_id,))
             logger.debug('DUMP TASK %r', filepath)
             with filepath.open('wb') as f:
@@ -207,10 +218,12 @@ class TaskManager(TaskEventListener):
             logger.debug('RESTORE TASKS %r', path)
             if not path.suffix == '.pickle':
                 continue
-            logger.debug('RESTORE TASKS really %r', path)
+            logger.error('RESTORE TASKS really %r', path)
             with path.open('rb') as f:
                 try:
                     task, state = pickle.load(f)
+                    print(type(task))
+                    print(type(state))
                     self.tasks[task.header.task_id] = task
                     self.tasks_states[task.header.task_id] = state
                 except (pickle.UnpicklingError, EOFError, ImportError):
